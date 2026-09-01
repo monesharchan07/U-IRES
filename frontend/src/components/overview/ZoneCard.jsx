@@ -5,13 +5,13 @@ import { IconDrop, IconFan, IconThermo, IconUsers, IconWifi, IconZap } from '../
 
 function StatCell({ icon: Icon, label, value, unit, badge, children }) {
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-2.5 hover:border-neon/25 transition-colors">
-      <div className="flex items-center justify-between gap-1">
-        <span className="inline-flex items-center gap-1.5 label-cap !text-[8.5px] !tracking-[0.16em]">
+    <div className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-2.5 hover:border-neon/25 transition-colors min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 label-cap !text-[8.5px] !tracking-[0.16em] min-w-0 flex-wrap">
           <Icon size={11} style={{ color: '#4fd7ff' }} />
           {label}
         </span>
-        {badge}
+        <span className="flex-shrink-0">{badge}</span>
       </div>
       {value !== '' ? (
         <div className="mt-1 font-mono font-bold tnum text-[17px] text-ink leading-none">
@@ -35,7 +35,7 @@ export default function ZoneCard({ zoneId }) {
   const lightOn = z.actuator.light === 'ON'
 
   return (
-    <section className="glass glass-hover hud-corners relative overflow-hidden h-full">
+    <section className="glass glass-hover hud-corners relative overflow-hidden">
       <span className="corner-br" />
       <div
         className="absolute -top-14 -right-14 w-44 h-44 rounded-full pointer-events-none"
@@ -79,7 +79,7 @@ export default function ZoneCard({ zoneId }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <StatCell icon={IconThermo} label="Temperature" value={z.temperature.toFixed(1)} unit="°C" badge={<DataBadge kind="live" dotted={false} />} />
           <StatCell icon={IconDrop} label="Humidity" value={z.humidity} unit="%" badge={<DataBadge kind="live" dotted={false} />} />
           <StatCell icon={IconWifi} label="Network" value={z.networkHealth} unit="%" badge={<StatusBadge level={z.network} />} />

@@ -36,7 +36,7 @@ export default function DataOverviewPanel() {
   ]
 
   return (
-    <section className="glass hud-corners">
+    <section className="glass hud-corners h-full">
       <span className="corner-br" />
       <header className="flex items-center justify-between px-4 pt-3.5 pb-2">
         <h3 className="label-cap !tracking-[0.24em]">Data Overview</h3>

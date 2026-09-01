@@ -5,7 +5,7 @@ import { getResourceIndicators } from '../../services/campusService'
 
 function IndicatorCard({ icon: Icon, label, value, unit, color, spark }) {
   return (
-    <div className="glass glass-hover !rounded-lg px-3 py-2.5 flex items-center gap-3 min-w-[150px] flex-1">
+    <div className="glass glass-hover !rounded-lg px-3 py-2.5 flex items-center gap-3 min-w-0">
       <span
         className="inline-flex items-center justify-center w-8 h-8 rounded-lg border shrink-0"
         style={{ color, borderColor: `${color}30`, background: `${color}12` }}
@@ -13,7 +13,7 @@ function IndicatorCard({ icon: Icon, label, value, unit, color, spark }) {
         <Icon size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="label-cap !text-[8px] !tracking-[0.18em] truncate">{label}</div>
+        <div className="label-cap !text-[8px] !tracking-[0.18em] whitespace-pre-line leading-tight">{label}</div>
         <div className="font-mono font-bold tnum text-[16px] text-ink leading-tight">
           {value}
           <span className="text-dim text-[9px] ml-1 font-tech">{unit}</span>
@@ -30,12 +30,12 @@ export default function ResourceIndicatorsPanel() {
   const ind = getResourceIndicators(zones)
 
   const cards = [
-    { icon: IconUsers, label: 'Average Occupancy', value: ind.avgOccupancy.toFixed(1), unit: 'PEOPLE', color: '#4fd7ff', spark: avgSpark(buffers, 'occupancy') },
-    { icon: IconThermo, label: 'Avg Temperature', value: ind.avgTemp.toFixed(1), unit: '°C', color: '#ffb454', spark: avgSpark(buffers, 'temperature') },
-    { icon: IconDrop, label: 'Avg Humidity', value: Math.round(ind.avgHum), unit: '%', color: '#4fd7ff', spark: avgSpark(buffers, 'humidity') },
-    { icon: IconWifi, label: 'Network Health', value: Math.round(ind.netHealth), unit: '%', color: '#3dffa8', spark: avgSpark(buffers, 'network') },
-    { icon: IconZap, label: 'Estimated Power', value: ind.power, unit: 'W', color: '#ffb454', spark: avgSpark(buffers, 'power') },
-    { icon: IconActivity, label: 'System Efficiency', value: ind.efficiency, unit: '%', color: '#3dffa8' },
+    { icon: IconUsers, label: 'AVG\nOCCUPANCY', value: ind.avgOccupancy.toFixed(1), unit: 'PEOPLE', color: '#4fd7ff', spark: avgSpark(buffers, 'occupancy') },
+    { icon: IconThermo, label: 'AVG\nTEMPERATURE', value: ind.avgTemp.toFixed(1), unit: '°C', color: '#ffb454', spark: avgSpark(buffers, 'temperature') },
+    { icon: IconDrop, label: 'AVG\nHUMIDITY', value: Math.round(ind.avgHum), unit: '%', color: '#4fd7ff', spark: avgSpark(buffers, 'humidity') },
+    { icon: IconWifi, label: 'NETWORK\nHEALTH', value: Math.round(ind.netHealth), unit: '%', color: '#3dffa8', spark: avgSpark(buffers, 'network') },
+    { icon: IconZap, label: 'ESTIMATED\nPOWER', value: ind.power, unit: 'W', color: '#ffb454', spark: avgSpark(buffers, 'power') },
+    { icon: IconActivity, label: 'SYSTEM\nEFFICIENCY', value: ind.efficiency, unit: '%', color: '#3dffa8' },
   ]
 
   return (
@@ -45,7 +45,7 @@ export default function ResourceIndicatorsPanel() {
         <h3 className="label-cap !tracking-[0.24em]">Resource Indicators</h3>
         <span className="font-mono text-[8px] text-faint tracking-[0.18em]" style={{ color: '#3dffa8' }}>● STREAMING</span>
       </header>
-      <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 flex-1 content-start">
+      <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-2 min-w-0 content-start">
         {cards.map((c) => (
           <IndicatorCard key={c.label} {...c} />
         ))}

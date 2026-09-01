@@ -1,91 +1,237 @@
 import { useAppStore } from '../../hooks/useAppStore'
-
-const NODES = [
-  { id: 'A', label: 'ZONE A', sub: 'Edge Node · Wing 1' },
-  { id: 'CORE', label: 'U-IRES CORE', sub: 'Decision Engine' },
-  { id: 'B', label: 'ZONE B', sub: 'Edge Node · Wing 2' },
-]
+import { IconCpu, IconNode } from '../icons'
 
 export default function StructureOverviewPanel() {
   const { zones } = useAppStore()
 
-  const nodeVisual = (node, idx) => {
-    const isCore = node.id === 'CORE'
-    const zoneState = isCore ? null : zones?.[node.id]
-    const online = isCore ? true : zoneState?.connection === 'online'
-    const color = isCore ? '#b48cff' : node.id === 'A' ? '#3dffa8' : '#4fd7ff'
-    return (
-      <div key={node.id} className={`flex items-center gap-3 ${idx % 2 === 1 ? 'flex-row-reverse' : ''}`}>
-        {idx % 2 === 1 && <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />}
-        <div
-          className={`relative shrink-0 flex flex-col items-center justify-center rounded-xl border transition-all ${isCore ? 'w-[74px] h-[74px]' : 'w-[58px] h-[58px]'}`}
-          style={{
-            borderColor: `${color}55`,
-            background: `radial-gradient(circle at 50% 35%, ${color}22, rgba(5,9,14,.7))`,
-            boxShadow: `0 0 22px -6px ${color}88, inset 0 0 14px -6px ${color}66`,
-          }}
-        >
-          {isCore && (
-            <svg viewBox="0 0 80 80" className="absolute inset-[-9px] w-[calc(100%+18px)] h-[calc(100%+18px)] spin-slow pointer-events-none">
-              <circle cx="40" cy="40" r="37" fill="none" stroke="#b48cff" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="10 14" />
-            </svg>
-          )}
-          <svg width={isCore ? 26 : 20} height={isCore ? 26 : 20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round">
-            {isCore ? (
-              <>
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-                <path d="M9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3" />
-              </>
-            ) : (
-              <>
-                <path d="M12 21s6.5-5.8 6.5-11a6.5 6.5 0 1 0-13 0c0 5.2 6.5 11 6.5 11z" />
-                <circle cx="12" cy="10" r="2.4" />
-              </>
-            )}
-          </svg>
-          <span className="absolute -bottom-1.5 -right-1.5 flex items-center gap-1 badge !px-1 !py-0" style={{
-            color: online ? '#3dffa8' : '#ff5470',
-            borderColor: online ? 'rgba(61,255,168,.4)' : 'rgba(255,84,112,.4)',
-            background: 'rgba(4,8,13,.95)',
-          }}>
-            <span className="w-1 h-1 rounded-full pulse-dot" style={{ background: online ? '#3dffa8' : '#ff5470' }} />
-            {online ? 'ONLINE' : 'OFFLINE'}
-          </span>
-        </div>
-        <div className={`${idx % 2 === 1 ? 'text-right' : ''}`}>
-          <div className="font-mono font-bold text-[12px] tracking-[0.16em]" style={{ color }}>{node.label}</div>
-          <div className="text-[9px] font-tech text-faint uppercase tracking-wider mt-0.5">{node.sub}</div>
-        </div>
-        {idx % 2 === 0 && <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />}
-      </div>
-    )
-  }
+  const za = zones?.A || { networkHealth: 98, estimatedPower: 14, mode: 'AUTO', connection: 'online' }
+  const zb = zones?.B || { networkHealth: 96, estimatedPower: 18, mode: 'AUTO', connection: 'online' }
+  const avgNet = ((za.networkHealth || 98) + (zb.networkHealth || 96)) / 2
 
   return (
-    <section className="glass hud-corners h-full flex flex-col">
+    <section className="glass hud-corners h-full flex flex-col justify-between">
       <span className="corner-br" />
-      <header className="flex items-center justify-between px-4 pt-3 pb-2">
-        <h3 className="label-cap !tracking-[0.24em]">Structure Overview</h3>
-        <span className="font-mono text-[8px] text-faint tracking-[0.18em]">TOPOLOGY</span>
+
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/[0.04]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="label-cap !tracking-[0.24em] text-ink">STRUCTURE OVERVIEW</h3>
+            <span
+              className="font-mono text-[8px] px-1.5 py-0.5 rounded border tracking-[0.16em]"
+              style={{ color: '#3dffa8', borderColor: 'rgba(61,255,168,0.35)', background: 'rgba(61,255,168,0.08)' }}
+            >
+              SYSTEM TOPOLOGY
+            </span>
+          </div>
+          <p className="text-[10px] text-faint font-tech mt-0.5">Real-time Network Structure &amp; Flow</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-neon pulse-dot" />
+          <span className="font-mono text-[9px] text-neon tracking-wider">ALL MESH ACTIVE</span>
+        </div>
       </header>
-      <div className="flex-1 flex flex-col justify-center gap-0 px-5 py-2">
-        {NODES.map((n, i) => (
-          <div key={n.id}>
-            {i > 0 && (
-              <div className="flex justify-center py-0.5">
-                <svg width="16" height="26" viewBox="0 0 16 26">
-                  <line x1="8" y1="0" x2="8" y2="26" stroke="rgba(61,255,168,0.5)" strokeWidth="1.4" className="flow-line" />
-                  <polygon points="8,24 4.6,19 11.4,19" fill="#3dffa8" opacity="0.85" />
+
+      {/* Main Topology: 3 Horizontal Nodes + Data Flow Connections */}
+      <div className="relative px-3 py-2 my-auto">
+        {/* Background Connecting Lines for Desktop */}
+        <div className="hidden md:block absolute inset-0 pointer-events-none z-0">
+          <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 400 130">
+            {/* Zone A -> Core active flow */}
+            <line x1="124" y1="46" x2="148" y2="46" stroke="#3dffa8" strokeWidth="1.5" className="flow-line" />
+            <polygon points="152,46 146,42 146,50" fill="#3dffa8" />
+
+            {/* Zone B -> Core active flow */}
+            <line x1="276" y1="46" x2="252" y2="46" stroke="#4fd7ff" strokeWidth="1.5" className="flow-line" />
+            <polygon points="248,46 254,42 254,50" fill="#4fd7ff" />
+
+            {/* Secondary Redundant Mesh Curve */}
+            <path d="M 65 105 C 130 130 270 130 335 105" fill="none" stroke="rgba(180, 140, 255, 0.35)" strokeWidth="1" strokeDasharray="3 3" />
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 relative z-10">
+          {/* Node 1: ZONE A (Left) */}
+          <div className="rounded-xl border border-neon/30 bg-black/40 p-2.5 transition-all hover:border-neon/60 hover:bg-neon/[0.03]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-neon/30 bg-neon/10 text-neon shrink-0">
+                <IconNode size={14} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-mono font-bold text-[12px] text-neon leading-tight">ZONE A</div>
+                <div className="text-[8.5px] font-tech text-dim truncate">Edge Node · Wing 1</div>
+              </div>
+              <span className="badge !px-1.5 !py-0" style={{ color: '#3dffa8', borderColor: 'rgba(61,255,168,0.4)', background: 'rgba(61,255,168,0.08)' }}>
+                ONLINE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-[8.5px] font-mono">
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">LATENCY</span>
+                <span className="text-ink font-bold tnum">12 ms</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">NET HEALTH</span>
+                <span className="text-neon font-bold tnum">{za.networkHealth}%</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">POWER</span>
+                <span className="text-ink font-bold tnum">{za.estimatedPower} W</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">MODE</span>
+                <span className="text-neon font-bold">{za.mode}</span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-[8px] font-mono text-neon/90 bg-neon/[0.06] px-2 py-0.5 rounded border border-neon/20">
+              <span>DATA FLOW</span>
+              <span>→</span>
+            </div>
+          </div>
+
+          {/* Node 2: U-IRES CORE (Center) */}
+          <div className="rounded-xl border border-[#b48cff]/40 bg-black/50 p-2.5 transition-all hover:border-[#b48cff]/70 shadow-[0_0_22px_-6px_rgba(180,140,255,0.25)]">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="relative shrink-0">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#b48cff]/40 bg-[#b48cff]/10 text-[#b48cff]">
+                  <IconCpu size={14} />
+                </span>
+                <svg viewBox="0 0 40 40" className="absolute inset-[-4px] w-[calc(100%+8px)] h-[calc(100%+8px)] spin-slow pointer-events-none">
+                  <circle cx="20" cy="20" r="18" fill="none" stroke="#b48cff" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="6 8" />
                 </svg>
               </div>
-            )}
-            {nodeVisual(n, i)}
+              <div className="min-w-0 flex-1">
+                <div className="font-mono font-bold text-[12px] text-[#b48cff] leading-tight">U-IRES CORE</div>
+                <div className="text-[8.5px] font-tech text-dim truncate">Decision Engine</div>
+              </div>
+              <span className="badge !px-1.5 !py-0" style={{ color: '#b48cff', borderColor: 'rgba(180,140,255,0.4)', background: 'rgba(180,140,255,0.08)' }}>
+                ONLINE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-[8.5px] font-mono">
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">CPU LOAD</span>
+                <span className="text-[#b48cff] font-bold tnum">24%</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">MEMORY</span>
+                <span className="text-ink font-bold tnum">1.2 GB</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">AI ENGINE</span>
+                <span className="text-[#b48cff] font-bold">UICE v2.4</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">UPTIME</span>
+                <span className="text-neon font-bold tnum">99.98%</span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-center gap-1 text-[8px] font-mono text-[#b48cff] bg-[#b48cff]/[0.08] px-2 py-0.5 rounded border border-[#b48cff]/30">
+              <span>● CORE ENGINE ACTIVE</span>
+            </div>
           </div>
-        ))}
+
+          {/* Node 3: ZONE B (Right) */}
+          <div className="rounded-xl border border-ice/30 bg-black/40 p-2.5 transition-all hover:border-ice/60 hover:bg-ice/[0.03]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-ice/30 bg-ice/10 text-ice shrink-0">
+                <IconNode size={14} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-mono font-bold text-[12px] text-ice leading-tight">ZONE B</div>
+                <div className="text-[8.5px] font-tech text-dim truncate">Edge Node · Wing 2</div>
+              </div>
+              <span className="badge !px-1.5 !py-0" style={{ color: '#4fd7ff', borderColor: 'rgba(79,215,255,0.4)', background: 'rgba(79,215,255,0.08)' }}>
+                ONLINE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-[8.5px] font-mono">
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">LATENCY</span>
+                <span className="text-ink font-bold tnum">14 ms</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">NET HEALTH</span>
+                <span className="text-ice font-bold tnum">{zb.networkHealth}%</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">POWER</span>
+                <span className="text-ink font-bold tnum">{zb.estimatedPower} W</span>
+              </div>
+              <div className="bg-white/[0.02] border border-white/[0.04] rounded px-1.5 py-1">
+                <span className="text-dim block text-[7.5px]">MODE</span>
+                <span className="text-ice font-bold">{zb.mode}</span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-[8px] font-mono text-ice/90 bg-ice/[0.06] px-2 py-0.5 rounded border border-ice/20">
+              <span>←</span>
+              <span>DATA FLOW</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <footer className="px-4 pb-3 pt-1 border-t border-white/5 flex items-center justify-between">
-        <span className="label-cap !text-[8px]">Mesh Status</span>
-        <span className="font-mono text-[9px]" style={{ color: '#3dffa8' }}>ALL SYSTEMS NOMINAL</span>
+
+      {/* System Mesh Status Panel (Horizontal 6 Slots) */}
+      <div className="mx-3 my-1 rounded-lg border border-white/[0.06] bg-black/30 px-3 py-1.5">
+        <div className="text-[8px] font-mono text-faint tracking-[0.16em] uppercase mb-1 flex items-center justify-between">
+          <span>SYSTEM MESH STATUS</span>
+          <span className="text-neon text-[7.5px]">TELEMETRY SYNCED</span>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-center">
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">NETWORK HEALTH</div>
+            <div className="font-mono text-[11px] font-bold text-neon tnum">{Math.round(avgNet)}%</div>
+          </div>
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">LINK QUALITY</div>
+            <div className="font-mono text-[11px] font-bold text-ice tnum">99.4%</div>
+          </div>
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">REDUNDANCY</div>
+            <div className="font-mono text-[10px] font-bold text-[#b48cff]">DUAL-MESH</div>
+          </div>
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">PACKET LOSS</div>
+            <div className="font-mono text-[11px] font-bold text-neon tnum">0.01%</div>
+          </div>
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">SYNC STATUS</div>
+            <div className="font-mono text-[11px] font-bold text-ice tnum">5 ms</div>
+          </div>
+          <div className="bg-white/[0.02] border border-white/[0.04] rounded p-1">
+            <div className="text-[7.5px] font-tech text-dim">SYSTEM ALERTS</div>
+            <div className="font-mono text-[11px] font-bold text-neon">0 ACTIVE</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Legend */}
+      <footer className="px-4 py-2 border-t border-white/[0.05] bg-black/20 flex flex-wrap items-center justify-between gap-2 text-[8px] font-mono">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="inline-flex items-center gap-1 text-[#3dffa8]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3dffa8]" /> ZONE A (Wing 1)
+          </span>
+          <span className="inline-flex items-center gap-1 text-[#b48cff]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#b48cff]" /> U-IRES CORE
+          </span>
+          <span className="inline-flex items-center gap-1 text-[#4fd7ff]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4fd7ff]" /> ZONE B (Wing 2)
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-1 text-dim">
+            <span className="w-3 h-0.5 bg-[#3dffa8]" /> DATA FLOW
+          </span>
+          <span className="inline-flex items-center gap-1 text-dim">
+            <span className="w-3 border-t border-dashed border-[#b48cff]" /> REDUNDANT LINK
+          </span>
+        </div>
       </footer>
     </section>
   )
