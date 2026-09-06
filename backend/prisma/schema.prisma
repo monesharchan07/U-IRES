@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ControlMode {
+  MANUAL
+  AUTO
+  SCHEDULED
+}
+
+enum DeviceType {
+  SENSOR_NODE
+  FAN
+  LIGHT
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+  MAINTENANCE
+}
+
+enum ActionLogStatus {
+  PENDING
+  SENT
+  ACKNOWLEDGED
+  FAILED
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  location    String?
+  capacity    Int      @default(0)
+  controlMode ControlMode @default(MANUAL)
+  mapX        Float    @default(0)
+  mapY        Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  devices         Device[]
+  telemetry       ZoneTelemetry[]
+  actuatorStates  ActuatorState[]
+  actionLogs      ActionLog[]
+
+  @@index([name])
+  @@map("zones")
+}
+
+model Device {
+  id          String      @id @default(uuid())
+  zoneId      String
+  deviceType  DeviceType
+  status      DeviceStatus @default(OFFLINE)
+  lastPingAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId])
+  @@index([deviceType])
+  @@index([status])
+  @@map("devices")
+}
+
+model ZoneTelemetry {
+  id             String   @id @default(cuid())
+  zoneId         String
+  timestamp      DateTime @db.Timestamptz(6)
+  temperature    Float?
+  humidity       Float?
+  occupancy      Int?
+  networkHealth  Float?
+  estimatedPower Float?
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId, timestamp(sort: Desc)], name: "zone_telemetry_zone_id_timestamp_desc_idx")
+  @@map("zone_telemetry")
+}
+
+model ActuatorState {
+  zoneId    String
+  device    String
+  state     Json
+  updatedAt DateTime @updatedAt
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@id([zoneId, device])
+  @@map("actuator_states")
+}
+
+model ActionLog {
+  id               String        @id @default(cuid())
+  zoneId           String
+  source           String
+  label            String
+  deviceStates     Json
+  executedAt       DateTime      @db.Timestamptz(6)
+  expectedOutcome  Json?
+  effectivenessScore Float?
+  status           ActionLogStatus @default(PENDING)
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId, executedAt(sort: Desc)], name: "action_log_zone_id_executed_at_desc_idx")
+  @@index([status])
+  @@map("action_logs")
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  severity  NotificationSeverity @default(INFO)
+  title     String
+  message   String
+  isRead    Boolean             @default(false)
+  createdAt DateTime            @default(now()) @db.Timestamptz(6)
+
+  @@index([createdAt(sort: Desc)], name: "notification_created_at_desc_idx")
+  @@index([isRead])
+  @@index([severity])
+  @@map("notifications")
+}
