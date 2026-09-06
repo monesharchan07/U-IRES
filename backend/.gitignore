@@ -1,0 +1,4 @@
+# U-IRES Backend — Node.js Logs & Dependencies
+node_modules/
+.env
+*.log
