@@ -12,9 +12,13 @@ require('dotenv').config()
 const app = require('./app')
 const { port, nodeEnv } = require('./config')
 
-const server = app.listen(port, () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`[U-IRES] Backend running on http://localhost:${port}  (${nodeEnv})`)
   console.log(`[U-IRES] Health endpoint → http://localhost:${port}/api/health`)
+})
+
+server.on('error', (err) => {
+  console.error('[U-IRES] Server error:', err)
 })
 
 // ── Graceful shutdown ────────────────────────────────────────────────────────

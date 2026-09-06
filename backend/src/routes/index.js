@@ -27,10 +27,18 @@
 
 const { Router } = require('express')
 const healthRoutes = require('./health')
+const zonesRoutes = require('./zones')
+const controlRoutes = require('./control')
+const notificationsRoutes = require('./notifications')
 
 const router = Router()
 
 // Health check — always available
 router.use('/health', healthRoutes)
+
+// Core REST API
+router.use('/zones', zonesRoutes)
+router.use('/control', controlRoutes)
+router.use('/notifications', notificationsRoutes)
 
 module.exports = router
