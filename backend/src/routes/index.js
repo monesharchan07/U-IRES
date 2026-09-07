@@ -30,6 +30,7 @@ const healthRoutes = require('./health')
 const zonesRoutes = require('./zones')
 const controlRoutes = require('./control')
 const notificationsRoutes = require('./notifications')
+const telemetryIngestRoutes = require('./telemetryIngest')
 
 const router = Router()
 
@@ -40,5 +41,6 @@ router.use('/health', healthRoutes)
 router.use('/zones', zonesRoutes)
 router.use('/control', controlRoutes)
 router.use('/notifications', notificationsRoutes)
+router.use('/telemetry', telemetryIngestRoutes)
 
 module.exports = router

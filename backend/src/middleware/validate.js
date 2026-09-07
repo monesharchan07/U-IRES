@@ -77,6 +77,26 @@ const markReadSchema = z.object({
   read: z.boolean()
 })
 
+const telemetryIngestSchema = z.object({
+  deviceId: z.string().min(1),
+  zoneId: z.enum(['A', 'B']),
+  timestamp: z.string().datetime().optional(),
+  temperature: z.number().min(-40).max(80).optional(),
+  humidity: z.number().min(0).max(100).optional(),
+  occupancy: z.number().int().min(0).optional(),
+  networkHealth: z.number().min(0).max(100).optional(),
+  estimatedPower: z.number().min(0).nullable().optional()
+}).strict().refine(
+  (data) => {
+    const measurements = ['temperature', 'humidity', 'occupancy', 'networkHealth']
+    return measurements.some(key => data[key] !== undefined && data[key] !== null)
+  },
+  {
+    message: 'At least one telemetry measurement (temperature, humidity, occupancy, networkHealth) is required',
+    path: ['measurements']
+  }
+)
+
 module.exports = {
   validate,
   validateZoneId,
@@ -84,5 +104,6 @@ module.exports = {
   validateActionHistoryQuery: validate(actionHistoryQuerySchema, 'query'),
   validateTelemetryHistoryQuery: validate(telemetryHistoryQuerySchema, 'query'),
   validateNotificationQuery: validate(notificationQuerySchema, 'query'),
-  validateMarkRead: validate(markReadSchema)
+  validateMarkRead: validate(markReadSchema),
+  validateTelemetryIngest: validate(telemetryIngestSchema)
 }
