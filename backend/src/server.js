@@ -11,6 +11,7 @@ require('dotenv').config()
 
 const app = require('./app')
 const { port, nodeEnv } = require('./config')
+const realtime = require('./realtime')
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`[U-IRES] Backend running on http://localhost:${port}  (${nodeEnv})`)
@@ -25,6 +26,9 @@ server.on('error', (err) => {
 
 function shutdown(signal) {
   console.log(`\n[U-IRES] Received ${signal} — shutting down gracefully...`)
+
+  realtime.closeAll()
+
   server.close(() => {
     console.log('[U-IRES] HTTP server closed.')
     process.exit(0)
