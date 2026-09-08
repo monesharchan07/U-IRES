@@ -2,6 +2,7 @@
 
 const { prisma } = require('../lib/prisma')
 const { ZONE_NAME_MAP } = require('../services/zoneService')
+const realtime = require('../realtime')
 
 async function ingest(req, res, next) {
   try {
@@ -104,6 +105,22 @@ async function ingest(req, res, next) {
         data: { lastPingAt: receivedAt }
       })
     ])
+
+    try {
+      realtime.publish('telemetry.updated', {
+        zoneId: data.zoneId,
+        deviceId: data.deviceId,
+        telemetryId: telemetry.id,
+        timestamp: telemetry.timestamp.toISOString(),
+        temperature: telemetry.temperature,
+        humidity: telemetry.humidity,
+        occupancy: telemetry.occupancy,
+        networkHealth: telemetry.networkHealth,
+        estimatedPower: telemetry.estimatedPower
+      }, telemetry.id)
+    } catch (err) {
+      console.warn('[SSE] Failed to publish telemetry.updated:', err.message)
+    }
 
     res.status(201).json({
       success: true,
