@@ -2,6 +2,7 @@
 
 const { prisma } = require('../lib/prisma')
 const { ZONE_NAME_MAP } = require('./zoneService')
+const realtime = require('../realtime')
 
 async function createAction({ zoneId, label, deviceStates, source }) {
   const zoneName = ZONE_NAME_MAP[zoneId]
@@ -26,6 +27,20 @@ async function createAction({ zoneId, label, deviceStates, source }) {
       status: 'PENDING'
     }
   })
+
+  try {
+    realtime.publish('action.created', {
+      zoneId,
+      actionId: actionLog.id,
+      source: actionLog.source,
+      label: actionLog.label,
+      deviceStates: actionLog.deviceStates,
+      status: actionLog.status,
+      executedAt: actionLog.executedAt.toISOString()
+    }, actionLog.id)
+  } catch (err) {
+    console.warn('[SSE] Failed to publish action.created:', err.message)
+  }
 
   return {
     id: actionLog.id,
