@@ -1,34 +1,21 @@
 import { apiClient } from '../api/client'
 import {
-  getInitialZones,
-  getMetricHistory,
   getLiveBufferSeed,
-  nextTick,
   METRIC_KEYS,
   ZONES,
 } from '../mock/mockData'
 
-const USE_MOCK_DATA = true
-
 export async function fetchZones() {
-  if (USE_MOCK_DATA) {
-    return getInitialZones()
-  }
-  return apiClient.get('/campus/zones')
-}
-
-export function tickZone(zone) {
-  if (USE_MOCK_DATA) {
-    return nextTick(zone)
-  }
-  return apiClient.post(`/campus/zones/${zone.id}/tick`, zone)
+  const zones = await apiClient.get('/zones')
+  return Object.fromEntries(zones.map((zone) => [zone.id, zone]))
 }
 
 export async function fetchMetricHistory({ zoneId, metricKey, rangeValue, anchorValue }) {
-  if (USE_MOCK_DATA) {
-    return getMetricHistory({ zoneId, metricKey, rangeValue, anchorValue })
+  const params = new URLSearchParams({ metric: metricKey, range: rangeValue })
+  if (anchorValue !== undefined && anchorValue !== null) {
+    params.set('anchorValue', String(anchorValue))
   }
-  return apiClient.get(`/campus/history?zone=${zoneId}&metric=${metricKey}&range=${rangeValue}`)
+  return apiClient.get(`/zones/${zoneId}/telemetry/history?${params.toString()}`)
 }
 
 export function seedLiveBuffers(intervalSec = 5) {
@@ -40,21 +27,6 @@ export function seedLiveBuffers(intervalSec = 5) {
     }
   }
   return buffers
-}
-
-export function appendLivePoint(buffersForZone, zonesState, now = Date.now()) {
-  const next = {}
-  for (const key of METRIC_KEYS) {
-    const arr = buffersForZone[key] || []
-    const d = new Date(now)
-    const point = {
-      t: now,
-      label: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`,
-      value: zonesState[key],
-    }
-    next[key] = [...arr.slice(-29), point]
-  }
-  return next
 }
 
 export function getResourceIndicators(zones) {

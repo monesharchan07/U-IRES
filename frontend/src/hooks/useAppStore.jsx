@@ -4,8 +4,6 @@ import { applyAction as svcApplyAction, resumeAutomation as svcResume } from '..
 import {
   INITIAL_NOTIFICATIONS,
   METRIC_KEYS,
-  NOTIFICATION_POOL,
-  ZONES,
 } from '../mock/mockData'
 
 const StoreContext = createContext(null)
@@ -21,8 +19,8 @@ export function AppStoreProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const [lastActions, setLastActions] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const tickCount = useRef(0)
   const bootedRef = useRef(false)
+  const esRef = useRef(null)
 
   useEffect(() => {
     let alive = true
@@ -34,6 +32,65 @@ export function AppStoreProvider({ children }) {
     })
     return () => {
       alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const es = new EventSource('/api/events?zone=A,B')
+    esRef.current = es
+
+    es.addEventListener('telemetry.updated', (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        setZones((prev) => {
+          if (!prev || !prev[data.zoneId]) return prev
+          const zone = prev[data.zoneId]
+          const occupancy = data.occupancy ?? zone.occupancy
+          const networkHealth = data.networkHealth ?? zone.networkHealth
+          return {
+            ...prev,
+            [data.zoneId]: {
+              ...zone,
+              temperature: data.temperature ?? zone.temperature,
+              humidity: data.humidity ?? zone.humidity,
+              occupancy,
+              occupancyLevel: occupancy >= 5 ? 'High' : 'Low',
+              networkHealth,
+              network: networkHealth >= 80 ? 'Good' : networkHealth >= 50 ? 'Fair' : 'Weak',
+              estimatedPower: data.estimatedPower ?? zone.estimatedPower,
+              connection: 'online',
+              lastUpdate: data.timestamp,
+            },
+          }
+        })
+      } catch (err) {
+        console.warn('[SSE] Failed to parse telemetry.updated:', err)
+      }
+    })
+
+    es.addEventListener('action.created', (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        const primary = data.deviceStates?.[0]
+        setLastActions((prev) => [{
+          id: data.actionId,
+          ts: data.executedAt,
+          zoneId: data.zoneId,
+          label: data.label,
+          deviceStates: data.deviceStates,
+          source: data.source,
+          status: data.status,
+          device: primary?.device,
+          state: primary?.state,
+        }, ...prev].slice(0, 10))
+      } catch (err) {
+        console.warn('[SSE] Failed to parse action.created:', err)
+      }
+    })
+
+    return () => {
+      es.close()
+      esRef.current = null
     }
   }, [])
 
@@ -84,7 +141,6 @@ export function AppStoreProvider({ children }) {
   const runAction = useCallback(async ({ zoneId, label, deviceStates, source }) => {
     const res = await svcApplyAction({ zoneId, label, deviceStates, source })
     if (res.success) {
-      applyDeviceStates(zoneId, deviceStates)
       setLastActions((prev) => [res.record, ...prev].slice(0, 10))
       notify({
         severity: 'success',
@@ -93,7 +149,7 @@ export function AppStoreProvider({ children }) {
       })
     }
     return res
-  }, [applyDeviceStates, notify])
+  }, [notify])
 
   const resumeAutomation = useCallback(async (zoneId) => {
     setZones((prev) => (prev ? { ...prev, [zoneId]: { ...prev[zoneId], mode: 'AUTO' } } : prev))
@@ -105,47 +161,6 @@ export function AppStoreProvider({ children }) {
   const engageManualMode = useCallback((zoneId) => {
     setZones((prev) => (prev ? { ...prev, [zoneId]: { ...prev[zoneId], mode: 'MANUAL' } } : prev))
   }, [])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setZones((prev) => {
-        if (!prev) return prev
-        const next = {}
-        for (const z of ZONES) next[z.id] = campusService.tickZone(prev[z.id])
-        return next
-      })
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (!zones) return
-    const now = Date.now()
-    setBuffers((prev) => {
-      const next = {}
-      for (const z of ZONES) {
-        next[z.id] = campusService.appendLivePoint(prev[z.id], zones[z.id], now)
-      }
-      return next
-    })
-    tickCount.current += 1
-    const tc = tickCount.current
-    if (tc > 2 && tc % 14 === 0) {
-      const poolItem = NOTIFICATION_POOL[(tc / 14 - 1) % NOTIFICATION_POOL.length]
-      notify({ ...poolItem, toast: false })
-    }
-    if (tc === 3) {
-      const hot = Object.values(zones).find((z) => z.temperature >= 27)
-      if (hot) {
-        notify({
-          severity: 'warn',
-          title: 'Threshold watch',
-          message: `${hot.id === 'A' ? 'Zone A' : 'Zone B'} temperature trending ${hot.temperature.toFixed(1)} °C — predicted to exceed threshold.`,
-          toast: false,
-        })
-      }
-    }
-  }, [zones, notify])
 
   const resourceIndicators = useMemo(
     () => (zones ? campusService.getResourceIndicators(zones) : null),
