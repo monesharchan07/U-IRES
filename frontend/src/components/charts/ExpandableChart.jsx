@@ -41,12 +41,44 @@ export function ChartExpandModal({ open, onClose, title: titleProp, defaultMetri
     setLoading(true)
     setData(null)
     const timer = setTimeout(() => {
-      fetchMetricHistory({ zoneId, metricKey: metric, rangeValue }).then((pts) => {
-        if (alive) {
-          setData(pts)
-          setLoading(false)
+      const fetchAndCombine = async () => {
+        try {
+          let result
+          if (zoneId === 'all') {
+            const [a, b] = await Promise.all([
+              fetchMetricHistory({ zoneId: 'A', metricKey: metric, rangeValue }),
+              fetchMetricHistory({ zoneId: 'B', metricKey: metric, rangeValue }),
+            ])
+            const map = new Map()
+            for (const pts of [a, b]) {
+              for (const p of pts) {
+                if (p.value === null || p.value === undefined || Number.isNaN(p.value)) continue
+                const existing = map.get(p.t)
+                if (existing) {
+                  existing.sum += p.value
+                  existing.count += 1
+                } else {
+                  map.set(p.t, { sum: p.value, count: 1, label: p.label, t: p.t })
+                }
+              }
+            }
+            result = Array.from(map.values())
+              .map((v) => ({ t: v.t, label: v.label, value: v.sum / v.count }))
+              .sort((x, y) => x.t - y.t)
+          } else {
+            result = await fetchMetricHistory({ zoneId, metricKey: metric, rangeValue })
+          }
+          if (alive) {
+            setData(result)
+            setLoading(false)
+          }
+        } catch (err) {
+          if (alive) {
+            setLoading(false)
+          }
         }
-      })
+      }
+      fetchAndCombine()
     }, 260)
     return () => {
       alive = false
