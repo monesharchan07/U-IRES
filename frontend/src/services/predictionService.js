@@ -1,7 +1,7 @@
 import { apiClient } from '../api/client'
 import { PREDICTION_MODELS, METRICS, METRIC_KEYS, getPredictionForMetric } from '../mock/mockData'
 
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 
 export async function fetchModelComparison() {
   if (USE_MOCK_DATA) {

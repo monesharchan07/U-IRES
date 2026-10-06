@@ -32,6 +32,7 @@ const controlRoutes = require('./control')
 const notificationsRoutes = require('./notifications')
 const telemetryIngestRoutes = require('./telemetryIngest')
 const realtimeRoutes = require('./realtime')
+const intelligenceRoutes = require('./intelligence')
 
 const router = Router()
 
@@ -46,5 +47,8 @@ router.use('/telemetry', telemetryIngestRoutes)
 
 // Real-time events
 router.use('/events', realtimeRoutes)
+
+// Intelligence / prediction
+router.use('/intelligence', intelligenceRoutes)
 
 module.exports = router

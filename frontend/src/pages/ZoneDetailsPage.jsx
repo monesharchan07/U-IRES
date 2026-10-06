@@ -7,10 +7,11 @@ import Panel from '../components/ui/Panel'
 import { DataBadge, StatusBadge } from '../components/ui/Badges'
 import { Segmented } from '../components/ui/Controls'
 import { ChartCard } from '../components/charts/ChartCard'
-import { HistoryChart, useHistorySeries } from '../components/charts/HistoryChart'
+import { HistoryChart } from '../components/charts/HistoryChart'
 import { TrendAreaChart } from '../components/charts/Primitives'
-import { EmptyNote, IconChip } from '../components/ui/Misc'
+import { EmptyNote, IconChip, SkeletonBox } from '../components/ui/Misc'
 import { IconBolt, IconCheck } from '../components/icons'
+import { fetchPrediction } from '../services/predictionService'
 
 function ThumbsIcon({ down = false, size = 13 }) {
   return (
@@ -21,24 +22,49 @@ function ThumbsIcon({ down = false, size = 13 }) {
 }
 
 function PredictionChart({ zoneId }) {
-  const hist = useHistorySeries({ zoneId, metricKey: 'temperature', rangeValue: '6H' })
-  const [merged, setMerged] = useState(null)
+  const [prediction, setPrediction] = useState(null)
+  const [error, setError] = useState(null)
+
   useEffect(() => {
-    if (!hist) return
-    const last = hist[hist.length - 1].value
-    const now = Date.now()
-    const future = Array.from({ length: 8 }, (_, i) => ({
-      t: now + (i + 1) * 1800000,
-      label: new Date(now + (i + 1) * 1800000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      value: null,
-      pv: Math.round((last + Math.sin(i / 2) * 0.6 + i * 0.08) * 10) / 10,
-    }))
-    setMerged([...hist.map((p) => ({ ...p, pv: p.value })), ...future])
-  }, [hist])
-  if (!merged) return <div className="skeleton w-full rounded-lg" style={{ height: 190 }} />
+    let alive = true
+    fetchPrediction({ zoneId, metricKey: 'temperature' })
+      .then((p) => {
+        if (alive) {
+          setPrediction(p)
+          setError(null)
+        }
+      })
+      .catch((err) => {
+        if (alive) {
+          setError(err.response?.data?.error?.message || err.message)
+          setPrediction(null)
+        }
+      })
+    return () => {
+      alive = false
+    }
+  }, [zoneId])
+
+  if (error) {
+    return (
+      <div className="w-full h-[190px] flex items-center justify-center rounded-lg border border-warn/30 bg-warn/[0.07] text-center p-4">
+        <span className="text-[11px] text-dim">Unable to load forecast: {error}</span>
+      </div>
+    )
+  }
+
+  if (!prediction) {
+    return <SkeletonBox className="w-full rounded-lg" height={190} />
+  }
+
+  const combinedData = [
+    ...prediction.data.filter(p => p.value !== null),
+    ...prediction.data.filter(p => p.value === null)
+  ]
+
   return (
     <TrendAreaChart
-      data={merged}
+      data={combinedData}
       series={[
         { key: 'value', label: 'MEASURED', color: '#3dffa8', type: 'line' },
         { key: 'pv', label: 'FORECAST', color: '#b48cff', type: 'line', dashed: true },

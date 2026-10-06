@@ -9,7 +9,6 @@ import { ChartCard } from '../components/charts/ChartCard'
 import { CompareBarChart, TrendAreaChart } from '../components/charts/Primitives'
 import { SkeletonBox, IconChip } from '../components/ui/Misc'
 import { Bar as MeterBar } from '../components/ui/Gauges'
-import { IconInfo } from '../components/icons'
 import { IconDrop, IconThermo, IconUsers, IconWifi, IconZap } from '../components/icons'
 
 const ICONS = {
@@ -98,14 +97,7 @@ export default function AiPredictionsPage() {
 
   return (
     <div className="space-y-3 rise-in">
-      <div className="flex items-center gap-2 rounded-lg border border-sim/30 bg-sim/[0.06] px-4 py-2.5">
-        <IconInfo size={14} style={{ color: '#b48cff' }} />
-        <span className="text-[11px] text-dim leading-snug">
-          Demonstration values — predictions and model scores below are mock outputs until the real ML evaluation pipeline is connected.
-        </span>
-      </div>
-
-      <Panel title={`AI Predictions — Zone ${zoneId}`} subtitle="Live sensor state versus model forecast · XGBoost forecaster">
+      <Panel title={`AI Predictions — Zone ${zoneId}`} subtitle="Live sensor state versus model forecast · Linear trend + seasonal baseline">
         {!predictions ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
             {[...Array(5)].map((_, i) => <SkeletonBox key={i} className="h-[120px]" />)}
