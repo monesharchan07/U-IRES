@@ -77,6 +77,12 @@ const markReadSchema = z.object({
   read: z.boolean()
 })
 
+const createNotificationSchema = z.object({
+  severity: z.enum(['INFO', 'WARNING', 'CRITICAL']),
+  title: z.string().min(1).max(200),
+  message: z.string().min(1).max(1000)
+})
+
 const telemetryIngestSchema = z.object({
   deviceId: z.string().min(1),
   zoneId: z.enum(['A', 'B']),
@@ -105,5 +111,6 @@ module.exports = {
   validateTelemetryHistoryQuery: validate(telemetryHistoryQuerySchema, 'query'),
   validateNotificationQuery: validate(notificationQuerySchema, 'query'),
   validateMarkRead: validate(markReadSchema),
+  validateCreateNotification: validate(createNotificationSchema),
   validateTelemetryIngest: validate(telemetryIngestSchema)
 }

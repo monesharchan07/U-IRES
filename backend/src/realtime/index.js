@@ -15,37 +15,45 @@ function formatSSE(eventName, data, eventId) {
 
 function publish(eventName, data, eventId) {
   const zoneId = data?.zoneId
-  if (!zoneId) {
-    console.warn(`[SSE] Publish attempted without zoneId: ${eventName}`)
-    return 0
-  }
+  const isGlobalEvent = !zoneId
 
-  const normalizedZone = zoneId.toUpperCase()
-  if (normalizedZone !== 'A' && normalizedZone !== 'B') {
-    console.warn(`[SSE] Invalid zoneId in event: ${zoneId}`)
-    return 0
-  }
-
-  const clients = clientManager.getClientsForZone(normalizedZone)
-  if (clients.size === 0) {
-    return 0
+  let targetZones = []
+  if (isGlobalEvent) {
+    targetZones = clientManager.getAllZones()
+    if (targetZones.length === 0) {
+      return 0
+    }
+  } else {
+    const normalizedZone = zoneId.toUpperCase()
+    if (normalizedZone !== 'A' && normalizedZone !== 'B') {
+      console.warn(`[SSE] Invalid zoneId in event: ${zoneId}`)
+      return 0
+    }
+    targetZones = [normalizedZone]
   }
 
   const message = formatSSE(eventName, data, eventId)
   let sentCount = 0
 
-  for (const res of clients) {
-    try {
-      res.write(message)
-      sentCount++
-    } catch (err) {
-      console.warn(`[SSE] Write failed for zone ${normalizedZone}:`, err.message)
-      clientManager.removeClient(res)
+  for (const normalizedZone of targetZones) {
+    const clients = clientManager.getClientsForZone(normalizedZone)
+    if (clients.size === 0) {
+      continue
     }
-  }
 
-  if (sentCount > 0) {
-    eventBuffer.push(normalizedZone, { id: eventId, eventName, data, timestamp: Date.now() })
+    for (const res of clients) {
+      try {
+        res.write(message)
+        sentCount++
+      } catch (err) {
+        console.warn(`[SSE] Write failed for zone ${normalizedZone}:`, err.message)
+        clientManager.removeClient(res)
+      }
+    }
+
+    if (clients.size > 0) {
+      eventBuffer.push(normalizedZone, { id: eventId, eventName, data, timestamp: Date.now() })
+    }
   }
 
   return sentCount

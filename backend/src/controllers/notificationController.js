@@ -23,7 +23,18 @@ async function markNotificationRead(req, res, next) {
   }
 }
 
+async function createNotification(req, res, next) {
+  try {
+    const { severity, title, message } = req.validated
+    const notification = await notificationService.createNotification({ severity, title, message })
+    res.status(201).json(notification)
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getNotifications,
-  markNotificationRead
+  markNotificationRead,
+  createNotification
 }

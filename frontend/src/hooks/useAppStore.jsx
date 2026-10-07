@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as campusService from '../services/campusService'
 import { applyAction as svcApplyAction, resumeAutomation as svcResume } from '../services/actionService'
+import { fetchNotifications, markNotificationRead } from '../services/notificationService'
 import {
-  INITIAL_NOTIFICATIONS,
   METRIC_KEYS,
 } from '../mock/mockData'
 
@@ -15,7 +15,7 @@ export function AppStoreProvider({ children }) {
   const [selectedZone, setSelectedZone] = useState('all')
   const [zones, setZones] = useState(null)
   const [buffers, setBuffers] = useState(() => campusService.seedLiveBuffers(5))
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
+  const [notifications, setNotifications] = useState([])
   const [toasts, setToasts] = useState([])
   const [lastActions, setLastActions] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -28,6 +28,11 @@ export function AppStoreProvider({ children }) {
       if (alive && !bootedRef.current) {
         setZones(z)
         bootedRef.current = true
+      }
+    })
+    fetchNotifications().then((result) => {
+      if (alive) {
+        setNotifications(result.data || [])
       }
     })
     return () => {
@@ -88,6 +93,18 @@ export function AppStoreProvider({ children }) {
       }
     })
 
+    es.addEventListener('notification.created', (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === data.id)) return prev
+          return [data, ...prev].slice(0, 24)
+        })
+      } catch (err) {
+        console.warn('[SSE] Failed to parse notification.created:', err)
+      }
+    })
+
     return () => {
       es.close()
       esRef.current = null
@@ -121,9 +138,17 @@ export function AppStoreProvider({ children }) {
     return item
   }, [pushToast])
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
+    const unread = notifications.filter((n) => !n.read)
+    for (const n of unread) {
+      try {
+        await markNotificationRead(n.id, true)
+      } catch (err) {
+        console.warn('[AppStore] Failed to mark notification read:', err)
+      }
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-  }, [])
+  }, [notifications])
 
   const clearNotifications = useCallback(() => setNotifications([]), [])
 

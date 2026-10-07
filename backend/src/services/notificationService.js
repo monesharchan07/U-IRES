@@ -1,6 +1,9 @@
 'use strict'
 
 const { prisma } = require('../lib/prisma')
+const realtime = require('../realtime')
+
+const VALID_SEVERITIES = ['INFO', 'WARNING', 'CRITICAL']
 
 async function getNotifications({ limit = 20, offset = 0, read = 'all' }) {
   const where = {}
@@ -59,7 +62,57 @@ async function markNotificationRead(notificationId, read) {
   }
 }
 
+async function createNotification({ severity, title, message }) {
+  if (!VALID_SEVERITIES.includes(severity)) {
+    const err = new Error(`Invalid severity: ${severity}. Must be one of: ${VALID_SEVERITIES.join(', ')}`)
+    err.code = 'VALIDATION_ERROR'
+    err.status = 400
+    throw err
+  }
+
+  if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    const err = new Error('Title is required')
+    err.code = 'VALIDATION_ERROR'
+    err.status = 400
+    throw err
+  }
+
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    const err = new Error('Message is required')
+    err.code = 'VALIDATION_ERROR'
+    err.status = 400
+    throw err
+  }
+
+  const notification = await prisma.notification.create({
+    data: {
+      severity,
+      title: title.trim(),
+      message: message.trim(),
+      isRead: false
+    }
+  })
+
+  const createdNotification = {
+    id: notification.id,
+    severity: notification.severity,
+    title: notification.title,
+    message: notification.message,
+    isRead: notification.isRead,
+    createdAt: notification.createdAt.toISOString()
+  }
+
+  try {
+    realtime.publish('notification.created', createdNotification, notification.id)
+  } catch (err) {
+    console.warn('[SSE] Failed to publish notification.created:', err.message)
+  }
+
+  return createdNotification
+}
+
 module.exports = {
   getNotifications,
-  markNotificationRead
+  markNotificationRead,
+  createNotification
 }
