@@ -106,13 +106,14 @@ export default function AiPredictionsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
             {METRIC_KEYS.map((k) => {
               const p = predictions[k]
+              const hasData = p && p.current !== undefined && p.forecastNext !== undefined && p.confidence !== undefined
               return (
                 <PredictionCard
                   key={k}
                   metricKey={k}
-                  current={p.current}
-                  predicted={p.forecastNext}
-                  confidence={p.confidence}
+                  current={hasData ? p.current : 0}
+                  predicted={hasData ? p.forecastNext : 0}
+                  confidence={hasData ? p.confidence : 0}
                 />
               )
             })}
@@ -135,7 +136,7 @@ export default function AiPredictionsPage() {
                 options={METRIC_KEYS.map((k) => ({ value: k, label: METRICS[k].short }))}
               />
               <div className="mt-2 min-h-[240px]">
-                {predictions ? (
+                {predictions && predictions[chartMetric]?.data ? (
                   <TrendAreaChart data={predictions[chartMetric].data} series={chartSeries} unit={METRICS[chartMetric].unit} height={252} showLegend />
                 ) : (
                   <SkeletonBox className="w-full" height={252} />
@@ -151,30 +152,36 @@ export default function AiPredictionsPage() {
               <SkeletonBox className="h-[260px]" />
             ) : (
               <div className="space-y-3 mt-1">
-                {models.map((m) => (
-                  <div key={m.id} className={`rounded-lg border px-3 py-2.5 transition-colors ${m.id === 'xgb' ? 'border-neon/40 bg-neon/[0.05]' : 'border-white/[0.06] bg-black/25 hover:border-neon/20'}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[11.5px] font-bold tracking-wider text-ink">{m.name}</span>
-                      <span className="font-mono text-[10px] tnum" style={{ color: m.id === 'xgb' ? '#3dffa8' : '#93a8b0' }}>R² {m.r2.toFixed(2)}</span>
+                {models.map((m) => {
+                  const r2 = m.r2 ?? 0
+                  const mae = m.mae ?? 0
+                  const rmse = m.rmse ?? 0
+                  const trainMs = m.trainMs ?? 0
+                  return (
+                    <div key={m.id} className={`rounded-lg border px-3 py-2.5 transition-colors ${m.id === 'xgb' ? 'border-neon/40 bg-neon/[0.05]' : 'border-white/[0.06] bg-black/25 hover:border-neon/20'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[11.5px] font-bold tracking-wider text-ink">{m.name}</span>
+                        <span className="font-mono text-[10px] tnum" style={{ color: m.id === 'xgb' ? '#3dffa8' : '#93a8b0' }}>R² {r2.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                        {[
+                          { k: 'MAE', v: mae },
+                          { k: 'RMSE', v: rmse },
+                          { k: 'FIT ms', v: trainMs },
+                        ].map((s) => (
+                          <div key={s.k}>
+                            <div className="font-mono tnum text-[13px] text-ink">{s.v}</div>
+                            <div className="label-cap !text-[7.5px] mt-0.5">{s.k}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2"><MeterBar value={r2 * 100} max={100} color={m.id === 'xgb' ? '#3dffa8' : m.id === 'rf' ? '#4fd7ff' : '#8fa8b0'} height={3.5} /></div>
+                      <div className="mt-1.5 text-[9.5px] font-tech text-faint tracking-wide">{m.note}</div>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                      {[
-                        { k: 'MAE', v: m.mae },
-                        { k: 'RMSE', v: m.rmse },
-                        { k: 'FIT ms', v: m.trainMs },
-                      ].map((s) => (
-                        <div key={s.k}>
-                          <div className="font-mono tnum text-[13px] text-ink">{s.v}</div>
-                          <div className="label-cap !text-[7.5px] mt-0.5">{s.k}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2"><MeterBar value={m.r2 * 100} max={100} color={m.id === 'xgb' ? '#3dffa8' : m.id === 'rf' ? '#4fd7ff' : '#8fa8b0'} height={3.5} /></div>
-                    <div className="mt-1.5 text-[9.5px] font-tech text-faint tracking-wide">{m.note}</div>
-                  </div>
-                ))}
+                  )
+                })}
                 <CompareBarChart
-                  data={models.map((m) => ({ label: m.name.split(' ')[0], accuracy: Math.round(m.r2 * 100) }))}
+                  data={models.map((m) => ({ label: m.name.split(' ')[0], accuracy: Math.round((m.r2 ?? 0) * 100) }))}
                   series={[{ key: 'accuracy', label: 'Accuracy (R² %)', color: '#b48cff' }]}
                   horizontal
                   height={110}
