@@ -2,6 +2,7 @@
 
 const telemetryHistoryService = require('../services/telemetryHistoryService')
 const predictionService = require('../services/predictionService')
+const optimizerService = require('../services/optimizerService')
 const { validate } = require('../middleware/validate')
 const { z } = require('zod')
 
@@ -20,6 +21,10 @@ const predictAllQuerySchema = z.object({
   zone: z.enum(['A', 'B']),
   horizon: horizonSchema,
   step: stepSchema
+})
+
+const optimizerQuerySchema = z.object({
+  zone: z.enum(['A', 'B'])
 })
 
 function formatLabel(timestamp) {
@@ -145,10 +150,51 @@ async function getAllPredictions(req, res, next) {
   }
 }
 
+async function getOptimizerCandidates(req, res, next) {
+  try {
+    const { zone } = req.validated
+
+    const currentState = await telemetryHistoryService.fetchLatestZoneState(zone)
+
+    let predictions = null
+    try {
+      predictions = await telemetryHistoryService.tryFetchPredictions(zone, 6)
+    } catch (predErr) {
+      console.warn('[Optimizer] Prediction fetch failed, continuing without:', predErr.message)
+    }
+
+    const result = optimizerService.generateOptimizerResult(zone, currentState, predictions)
+
+    res.json(result)
+  } catch (err) {
+    if (err.code === 'INSUFFICIENT_DATA') {
+      return res.status(422).json({
+        error: {
+          code: err.code,
+          message: err.message,
+          details: err.details
+        }
+      })
+    }
+    if (err.code === 'INVALID_ZONE' || err.code === 'NOT_FOUND') {
+      return res.status(err.status || 400).json({
+        error: {
+          code: err.code,
+          message: err.message,
+          details: err.details
+        }
+      })
+    }
+    next(err)
+  }
+}
+
 module.exports = {
   getModels,
   getPrediction,
   getAllPredictions,
+  getOptimizerCandidates,
   validatePredictQuery: validate(predictQuerySchema, 'query'),
-  validatePredictAllQuery: validate(predictAllQuerySchema, 'query')
+  validatePredictAllQuery: validate(predictAllQuerySchema, 'query'),
+  validateOptimizerQuery: validate(optimizerQuerySchema, 'query')
 }

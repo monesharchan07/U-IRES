@@ -11,4 +11,6 @@ router.get('/predict', intelligenceController.validatePredictQuery, intelligence
 
 router.get('/predict-all', intelligenceController.validatePredictAllQuery, intelligenceController.getAllPredictions)
 
+router.get('/optimizer/candidates', intelligenceController.validateOptimizerQuery, intelligenceController.getOptimizerCandidates)
+
 module.exports = router

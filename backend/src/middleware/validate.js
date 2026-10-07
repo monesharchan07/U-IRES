@@ -103,6 +103,10 @@ const telemetryIngestSchema = z.object({
   }
 )
 
+const optimizerQuerySchema = z.object({
+  zone: z.enum(['A', 'B'])
+})
+
 module.exports = {
   validate,
   validateZoneId,
@@ -112,5 +116,6 @@ module.exports = {
   validateNotificationQuery: validate(notificationQuerySchema, 'query'),
   validateMarkRead: validate(markReadSchema),
   validateCreateNotification: validate(createNotificationSchema),
-  validateTelemetryIngest: validate(telemetryIngestSchema)
+  validateTelemetryIngest: validate(telemetryIngestSchema),
+  validateOptimizerQuery: validate(optimizerQuerySchema, 'query')
 }
