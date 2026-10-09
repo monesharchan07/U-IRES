@@ -105,5 +105,28 @@ module.exports = {
   getStats,
   closeAll,
   clientManager,
-  eventBuffer
+  eventBuffer,
+  publishActionStatus,
+  publishActuatorUpdate
+}
+
+function publishActionStatus(actionId, zoneId, status, previousStatus, executedAt, error) {
+  return publish('action.status', {
+    actionId,
+    zoneId,
+    status,
+    previousStatus,
+    executedAt,
+    error
+  }, actionId)
+}
+
+function publishActuatorUpdate(zoneId, device, state, source = 'hardware') {
+  return publish('actuator.updated', {
+    zoneId,
+    device,
+    state,
+    updatedAt: new Date().toISOString(),
+    source
+  }, `actuator-${zoneId}-${device}`)
 }

@@ -12,10 +12,12 @@ require('dotenv').config()
 const app = require('./app')
 const { port, nodeEnv } = require('./config')
 const realtime = require('./realtime')
+const hardwareBridge = require('./services/hardwareBridge')
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`[U-IRES] Backend running on http://localhost:${port}  (${nodeEnv})`)
   console.log(`[U-IRES] Health endpoint → http://localhost:${port}/api/health`)
+  hardwareBridge.reconcileStaleSentActionsOnStartup()
 })
 
 server.on('error', (err) => {

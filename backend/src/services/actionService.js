@@ -3,7 +3,6 @@
 const { prisma } = require('../lib/prisma')
 const { ZONE_NAME_MAP } = require('./zoneService')
 const realtime = require('../realtime')
-const feedbackService = require('./feedbackService')
 
 async function createAction({ zoneId, label, deviceStates, source }) {
   const zoneName = ZONE_NAME_MAP[zoneId]
@@ -42,18 +41,6 @@ async function createAction({ zoneId, label, deviceStates, source }) {
   } catch (err) {
     console.warn('[SSE] Failed to publish action.created:', err.message)
   }
-
-  setTimeout(() => {
-    feedbackService.computeEffectiveness(actionLog.id)
-      .then(result => {
-        if (!result.alreadyComputed) {
-          console.log(`[Feedback] Auto-computed effectiveness for action ${actionLog.id}: ${result.effectiveness}`)
-        }
-      })
-      .catch(err => {
-        console.warn(`[Feedback] Auto-computation failed for action ${actionLog.id}:`, err.message)
-      })
-  }, 20 * 60 * 1000)
 
   return {
     id: actionLog.id,
