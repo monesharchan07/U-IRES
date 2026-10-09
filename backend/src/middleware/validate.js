@@ -107,9 +107,28 @@ const optimizerQuerySchema = z.object({
   zone: z.enum(['A', 'B'])
 })
 
+const actionIdSchema = z.string().cuid()
+
+function validateActionId(paramName = 'actionId') {
+  return (req, res, next) => {
+    const actionId = req.params[paramName]
+    const result = actionIdSchema.safeParse(actionId)
+    if (!result.success) {
+      const err = new Error(`Invalid action ID: ${actionId}`)
+      err.code = 'VALIDATION_ERROR'
+      err.status = 400
+      return next(err)
+    }
+    req.validated = req.validated || {}
+    req.validated.actionId = result.data
+    next()
+  }
+}
+
 module.exports = {
   validate,
   validateZoneId,
+  validateActionId,
   validateActionPayload: validate(actionPayloadSchema),
   validateActionHistoryQuery: validate(actionHistoryQuerySchema, 'query'),
   validateTelemetryHistoryQuery: validate(telemetryHistoryQuerySchema, 'query'),

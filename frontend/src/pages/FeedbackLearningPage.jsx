@@ -1,13 +1,14 @@
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '../hooks/useAppStore'
 import { useLiveClock } from '../hooks/useLiveClock'
-import { FEEDBACK_PIPELINE, buildFeedbackCycle } from '../mock/mockData'
+import { FEEDBACK_PIPELINE } from '../mock/mockData'
+import { fetchFeedbackCycle } from '../services/feedbackService'
 import Panel from '../components/ui/Panel'
 import { DataBadge } from '../components/ui/Badges'
 import { ScoreRing } from '../components/ui/Gauges'
-import { EmptyNote } from '../components/ui/Misc'
+import { EmptyNote, Spinner } from '../components/ui/Misc'
 import { timeAgo } from '../utils/format'
-import { IconActivity, IconBrain, IconCheck, IconRefresh, IconTarget } from '../components/icons'
+import { IconActivity, IconBrain, IconCheck, IconRefresh, IconTarget, IconAlert } from '../components/icons'
 
 const PIPE_ICONS = [IconBrain, IconBoltLocal, IconTarget, IconActivity, IconRefresh, IconCheck]
 
@@ -83,7 +84,42 @@ function FcaoFlow() {
 export default function FeedbackLearningPage() {
   const { lastActions } = useAppStore()
   const now = useLiveClock(1000)
-  const cycle = useMemo(() => buildFeedbackCycle(lastActions[0], 'v1'), [lastActions])
+  const [cycle, setCycle] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const latestActionId = useMemo(() => lastActions[0]?.id, [lastActions])
+
+  useEffect(() => {
+    let alive = true
+    if (!latestActionId) {
+      setCycle(null)
+      setError(null)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    fetchFeedbackCycle(latestActionId)
+      .then(data => {
+        if (alive) {
+          setCycle(data)
+          setLoading(false)
+        }
+      })
+      .catch(err => {
+        if (alive) {
+          setError(err.message)
+          setCycle(null)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [latestActionId])
 
   const steps = [
     'Action completed',
@@ -99,9 +135,26 @@ export default function FeedbackLearningPage() {
         <FcaoFlow />
       </Panel>
 
-      {!cycle ? (
+      {!latestActionId ? (
         <Panel title="Latest Learning Cycle">
           <EmptyNote>Apply an action from the Action Center or Manual Override to generate a learning cycle.</EmptyNote>
+        </Panel>
+      ) : loading ? (
+        <Panel title="Latest Learning Cycle">
+          <div className="flex items-center justify-center gap-2 py-10 text-dim text-xs font-tech">
+            <Spinner size={14} /> COMPUTING FEEDBACK CYCLE…
+          </div>
+        </Panel>
+      ) : error ? (
+        <Panel title="Latest Learning Cycle">
+<div className="flex items-center gap-2 text-dim text-xs font-tech py-6">
+              <IconAlert size={14} style={{ color: '#ff8a97' }} />
+              <span>Failed to load feedback cycle: {error}</span>
+            </div>
+        </Panel>
+      ) : !cycle ? (
+        <Panel title="Latest Learning Cycle">
+          <EmptyNote>No feedback data available for this action.</EmptyNote>
         </Panel>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
@@ -131,12 +184,22 @@ export default function FeedbackLearningPage() {
 
           <Panel title="Action Effectiveness" subtitle="How closely reality matched the model" className="xl:col-span-4">
             <div className="flex flex-col items-center justify-center py-3">
-              <ScoreRing score={cycle.effectiveness} size={150} label="EFFECTIVENESS" />
+              <ScoreRing score={cycle.effectiveness ?? 0} size={150} label="EFFECTIVENESS" />
               <div className="mt-4 rounded-lg border border-white/[0.06] bg-black/25 px-3.5 py-2.5 w-full">
                 <div className="label-cap !text-[8px]">Policy Adjustment</div>
-                <div className="font-mono text-[11px] mt-1" style={{ color: '#b48cff' }}>{cycle.policyDelta}</div>
+                <div className="font-mono text-[11px] mt-1" style={{ color: '#b48cff' }}>
+                  {cycle.policyDelta}
+                  {cycle.dataStatus === 'INSUFFICIENT_DATA' && (
+                    <span className="ml-2 text-[9px]" style={{ color: '#ffb454' }}> (insufficient data)</span>
+                  )}
+                </div>
               </div>
             </div>
+            {cycle.dataStatus === 'INSUFFICIENT_DATA' && (
+              <div className="mt-3 text-center text-[10px] font-tech" style={{ color: '#ffb454' }}>
+                Insufficient telemetry data for effectiveness calculation
+              </div>
+            )}
           </Panel>
 
           <Panel title="Verification Pipeline" subtitle="Cycle completion status" className="xl:col-span-4">
@@ -150,6 +213,11 @@ export default function FeedbackLearningPage() {
                 </div>
               ))}
             </div>
+            {cycle.dataStatus === 'INSUFFICIENT_DATA' && (
+              <div className="mt-3 text-center text-[10px] font-tech" style={{ color: '#ffb454' }}>
+                Pipeline status reflects computation readiness, not mock completion
+              </div>
+            )}
           </Panel>
         </div>
       )}
