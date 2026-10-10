@@ -67,7 +67,7 @@ async function getZoneByFrontendId(frontendZoneId) {
   const latestTelemetry = zone.telemetry[0] || null
   const actuators = {}
   for (const a of zone.actuatorStates) {
-    actuators[a.device] = { state: a.state, updatedAt: a.updatedAt }
+    actuators[a.device] = { state: a.state?.state, updatedAt: a.updatedAt }
   }
 
   return mapZoneToFrontend(zone, latestTelemetry, actuators, zone.devices)
@@ -90,7 +90,7 @@ async function getAllZones() {
     const latestTelemetry = z.telemetry[0] || null
     const actuators = {}
     for (const a of z.actuatorStates) {
-      actuators[a.device] = { state: a.state, updatedAt: a.updatedAt }
+      actuators[a.device] = { state: a.state?.state, updatedAt: a.updatedAt }
     }
     return mapZoneToFrontend(z, latestTelemetry, actuators, z.devices)
   })
